@@ -5,21 +5,21 @@ require_once 'includes/koneksi.php';
 
 $user_id      = $_SESSION['user_id'];
 $nama_lengkap = $_SESSION['nama_lengkap'];
+$nama_safe    = mysqli_real_escape_string($koneksi, $nama_lengkap);
 
 // Hapus kasus
 if (isset($_GET['hapus'])) {
     $id_hapus = (int)$_GET['hapus'];
-    mysqli_query($koneksi, "DELETE FROM kasus WHERE id = $id_hapus AND pengacara_id = $user_id");
+    mysqli_query($koneksi, "DELETE FROM kasus WHERE id = $id_hapus AND pengacara = '$nama_safe'");
     header("Location: dashboard.php?pesan=hapus_sukses");
     exit();
 }
 
 $pesan = $_GET['pesan'] ?? '';
 
-// Ambil kasus milik pengacara yg login
-// Coba kolom pengacara_id dulu, fallback ke username
+// Ambil kasus milik pengacara yang login (relasi via nama)
 $result = mysqli_query($koneksi,
-    "SELECT * FROM kasus WHERE pengacara_id = $user_id ORDER BY tanggal_masuk DESC"
+    "SELECT * FROM kasus WHERE pengacara = '$nama_safe' ORDER BY tanggal_masuk DESC"
 );
 
 // Helper badge
