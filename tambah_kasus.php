@@ -3,9 +3,9 @@
 require_once 'includes/cek_session.php';
 require_once 'includes/koneksi.php';
 
-$user_id = $_SESSION['user_id'];
-$error   = "";
-$success = "";
+$nama_lengkap = $_SESSION['nama_lengkap'];
+$error        = "";
+$success      = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nomor_kasus   = trim($_POST['nomor_kasus'] ?? '');
@@ -29,9 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $d = mysqli_real_escape_string($koneksi, $deskripsi);
             $t = mysqli_real_escape_string($koneksi, $tanggal_masuk);
             $s = mysqli_real_escape_string($koneksi, $status);
+            $p = mysqli_real_escape_string($koneksi, $nama_lengkap);
 
-            $query = "INSERT INTO kasus (nomor_kasus, nama_klien, jenis_kasus, deskripsi, tanggal_masuk, status, pengacara_id)
-                      VALUES ('$n','$k','$j','$d','$t','$s', $user_id)";
+            $query = "INSERT INTO kasus (nomor_kasus, nama_klien, jenis_kasus, deskripsi, tanggal_masuk, status, pengacara)
+                      VALUES ('$n','$k','$j','$d','$t','$s','$p')";
             if (mysqli_query($koneksi, $query)) {
                 header("Location: dashboard.php?pesan=tambah_sukses");
                 exit();
