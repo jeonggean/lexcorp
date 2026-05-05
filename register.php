@@ -1,5 +1,5 @@
 <?php
-// login.php
+// register.php
 session_start();
 
 if (isset($_SESSION['user_id'])) {
@@ -9,45 +9,43 @@ if (isset($_SESSION['user_id'])) {
 
 require_once 'includes/koneksi.php';
 
-$error = "";
+$error   = "";
+$success = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username'] ?? '');
-    $password = trim($_POST['password'] ?? '');
+    $nama_lengkap = trim($_POST['nama_lengkap'] ?? '');
+    $username     = trim($_POST['username'] ?? '');
+    $password     = trim($_POST['password'] ?? '');
 
-    if (empty($username) || empty($password)) {
-        $error = "Username dan password wajib diisi!";
+    if (empty($nama_lengkap) || empty($username) || empty($password)) {
+        $error = "Semua field wajib diisi!";
     } else {
         $username_safe = mysqli_real_escape_string($koneksi, $username);
-        $password_safe = mysqli_real_escape_string($koneksi, $password);
-        $query  = "SELECT * FROM users WHERE username = '$username_safe' AND password = '$password_safe' LIMIT 1";
-        $result = mysqli_query($koneksi, $query);
-
-        if ($result && mysqli_num_rows($result) > 0) {
-            $user = mysqli_fetch_assoc($result);
-            $_SESSION['user_id']      = $user['id'];
-            $_SESSION['username']     = $user['username'];
-            $_SESSION['nama_lengkap'] = $user['nama_lengkap'];
-            header("Location: dashboard.php");
-            exit();
+        $cek = mysqli_query($koneksi, "SELECT id FROM users WHERE username = '$username_safe'");
+        if (mysqli_num_rows($cek) > 0) {
+            $error = "Username <strong>" . htmlspecialchars($username) . "</strong> sudah terdaftar. Pilih username lain.";
         } else {
-            $error = "Username atau password salah. Silakan coba lagi.";
+            $nama_safe     = mysqli_real_escape_string($koneksi, $nama_lengkap);
+            $password_safe = mysqli_real_escape_string($koneksi, $password);
+            $query = "INSERT INTO users (nama_lengkap, username, password) VALUES ('$nama_safe','$username_safe','$password_safe')";
+            if (mysqli_query($koneksi, $query)) {
+                $success = "Registrasi berhasil! Silakan login.";
+                $_POST = [];
+            } else {
+                $error = "Gagal menyimpan data: " . mysqli_error($koneksi);
+            }
         }
     }
 }
-
-$pesan = $_GET['pesan'] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — LexCorp Law Firm</title>
+    <title>Registrasi — LexCorp Law Firm</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
     <style>
         body {
             background-color: #f0ece2;
@@ -74,7 +72,6 @@ $pesan = $_GET['pesan'] ?? '';
             align-items: center;
             gap: 10px;
         }
-        .lx-brand span { color: #f5f0e8; font-size: 1.4rem; }
         footer {
             background: #13111a;
             color: #666;
@@ -85,40 +82,35 @@ $pesan = $_GET['pesan'] ?? '';
             border-top: 3px solid #c9a227;
         }
         footer em { color: #c9a227; font-style: normal; }
-        .login-wrap {
+        .reg-wrap {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 50px 20px;
         }
-        .login-card {
+        .reg-card {
             background: #fff;
             border-radius: 2px;
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
             box-shadow: 0 8px 40px rgba(0,0,0,0.12);
             overflow: hidden;
         }
-        .login-card-header {
+        .reg-card-header {
             background: #13111a;
             padding: 28px 36px 24px;
             text-align: center;
             border-bottom: 3px solid #c9a227;
         }
-        .login-card-header h2 {
+        .reg-card-header h2 {
             font-family: 'Playfair Display', serif;
             color: #c9a227;
             font-size: 1.55rem;
             margin: 0 0 4px;
         }
-        .login-card-header p {
-            color: #888;
-            font-size: 0.82rem;
-            font-style: italic;
-            margin: 0;
-        }
-        .login-card-body { padding: 32px 36px; }
+        .reg-card-header p { color: #888; font-size: 0.82rem; font-style: italic; margin: 0; }
+        .reg-card-body { padding: 32px 36px; }
         .form-label {
             font-size: 0.82rem;
             font-weight: 700;
@@ -140,7 +132,7 @@ $pesan = $_GET['pesan'] ?? '';
             box-shadow: 0 0 0 3px rgba(201,162,39,0.15);
             background: #fff;
         }
-        .btn-login {
+        .btn-register {
             background: #c9a227;
             color: #13111a;
             font-family: 'Playfair Display', serif;
@@ -153,64 +145,62 @@ $pesan = $_GET['pesan'] ?? '';
             width: 100%;
             transition: background 0.2s, transform 0.1s;
         }
-        .btn-login:hover { background: #a8871e; transform: translateY(-1px); }
-        .btn-login:active { transform: translateY(0); }
-        .divider { text-align: center; margin: 18px 0 14px; font-size: 0.8rem; color: #aaa; }
-        .register-link { text-align: center; font-size: 0.83rem; color: #888; }
-        .register-link a { color: #c9a227; font-weight: 600; text-decoration: none; }
-        .register-link a:hover { text-decoration: underline; }
+        .btn-register:hover { background: #a8871e; transform: translateY(-1px); }
+        .login-link { text-align: center; font-size: 0.83rem; color: #888; margin-top: 16px; }
+        .login-link a { color: #c9a227; font-weight: 600; text-decoration: none; }
+        .login-link a:hover { text-decoration: underline; }
+        .divider { border-top: 1px solid #ede8de; margin: 20px 0; }
     </style>
 </head>
 <body>
 
 <nav class="lx-navbar">
-    <a href="index.php" class="lx-brand">
-        <span>⚖️</span> LEXCORP LAW FIRM
-    </a>
+    <a href="login.php" class="lx-brand">⚖️ LEXCORP LAW FIRM</a>
 </nav>
 
-<div class="login-wrap">
-    <div class="login-card">
-        <div class="login-card-header">
-            <h2>⚖️ Form Login</h2>
-            <p>Silakan login untuk mengakses sistem.</p>
+<div class="reg-wrap">
+    <div class="reg-card">
+        <div class="reg-card-header">
+            <h2>📝 Daftar Akun</h2>
+            <p>Buat akun untuk mengakses sistem manajemen kasus.</p>
         </div>
-        <div class="login-card-body">
+        <div class="reg-card-body">
 
-            <?php if ($pesan === 'belum_login'): ?>
-                <div class="alert alert-warning py-2 px-3" style="font-size:0.85rem; border-left:4px solid #c9a227; border-radius:2px;">
-                    ⚠️ Anda harus login terlebih dahulu.
-                </div>
-            <?php endif; ?>
-            <?php if ($pesan === 'logout'): ?>
-                <div class="alert alert-success py-2 px-3" style="font-size:0.85rem; border-radius:2px;">
-                    ✅ Anda telah berhasil logout.
-                </div>
-            <?php endif; ?>
             <?php if (!empty($error)): ?>
                 <div class="alert alert-danger py-2 px-3" style="font-size:0.85rem; border-left:4px solid #8b1a1a; border-radius:2px;">
-                    ❌ <?= htmlspecialchars($error) ?>
+                    ❌ <?= $error ?>
+                </div>
+            <?php endif; ?>
+            <?php if (!empty($success)): ?>
+                <div class="alert alert-success py-2 px-3" style="font-size:0.85rem; border-left:4px solid #2e7d32; border-radius:2px;">
+                    ✅ <?= htmlspecialchars($success) ?>
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="login.php">
+            <form method="POST" action="register.php">
+                <div class="mb-3">
+                    <label class="form-label" for="nama_lengkap">Nama Lengkap</label>
+                    <input type="text" id="nama_lengkap" name="nama_lengkap" class="form-control"
+                           placeholder="Nama lengkap Anda"
+                           value="<?= htmlspecialchars($_POST['nama_lengkap'] ?? '') ?>" required>
+                </div>
                 <div class="mb-3">
                     <label class="form-label" for="username">Username</label>
                     <input type="text" id="username" name="username" class="form-control"
-                           placeholder="Masukkan username"
+                           placeholder="Pilih username unik"
                            value="<?= htmlspecialchars($_POST['username'] ?? '') ?>" required>
                 </div>
                 <div class="mb-4">
                     <label class="form-label" for="password">Password</label>
                     <input type="password" id="password" name="password" class="form-control"
-                           placeholder="Masukkan password" required>
+                           placeholder="Buat password" required>
                 </div>
-                <button type="submit" class="btn-login"> Login</button>
+                <button type="submit" class="btn-register">Register</button>
             </form>
 
-            <div class="divider">— atau —</div>
-            <p class="register-link">
-                Belum Memiliki akun? <a href="register.php">Registrasi</a>
+            <div class="divider"></div>
+            <p class="login-link">
+                Sudah punya akun? <a href="login.php">Login di sini</a>
             </p>
         </div>
     </div>

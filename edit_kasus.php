@@ -1,45 +1,63 @@
 <?php
-// tambah_kasus.php — CREATE: Tambah data kasus baru
+// edit_kasus.php — EDIT: Ubah data kasus
 require_once 'includes/cek_session.php';
 require_once 'includes/koneksi.php';
 
 $user_id = $_SESSION['user_id'];
 $error   = "";
-$success = "";
 
+$id = (int)($_GET['id'] ?? 0);
+if (!$id) {
+    header("Location: dashboard.php");
+    exit();
+}
+
+// Ambil data kasus
+$result = mysqli_query($koneksi, "SELECT * FROM kasus WHERE id = $id AND pengacara_id = $user_id LIMIT 1");
+if (mysqli_num_rows($result) === 0) {
+    header("Location: dashboard.php");
+    exit();
+}
+$kasus = mysqli_fetch_assoc($result);
+
+// Proses simpan
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $nomor_kasus   = trim($_POST['nomor_kasus'] ?? '');
     $nama_klien    = trim($_POST['nama_klien'] ?? '');
-    $jenis_kasus   = $_POST['jenis_kasus'] ?? '';
-    $deskripsi     = trim($_POST['deskripsi'] ?? '');
+    $nomor_kasus   = trim($_POST['nomor_kasus'] ?? '');
     $tanggal_masuk = $_POST['tanggal_masuk'] ?? '';
-    $status        = $_POST['status'] ?? 'Aktif';
+    $status        = $_POST['status'] ?? '';
+    $deskripsi     = trim($_POST['deskripsi'] ?? '');
 
-    if (empty($nomor_kasus) || empty($nama_klien) || empty($jenis_kasus) ||
-        empty($deskripsi)   || empty($tanggal_masuk)) {
+    if (empty($nama_klien) || empty($nomor_kasus) || empty($tanggal_masuk) || empty($status)) {
         $error = "Semua field wajib diisi!";
     } else {
-        $cek = mysqli_query($koneksi, "SELECT id FROM kasus WHERE nomor_kasus = '" . mysqli_real_escape_string($koneksi, $nomor_kasus) . "'");
-        if (mysqli_num_rows($cek) > 0) {
-            $error = "Nomor kasus <strong>" . htmlspecialchars($nomor_kasus) . "</strong> sudah terdaftar.";
-        } else {
-            $n = mysqli_real_escape_string($koneksi, $nomor_kasus);
-            $k = mysqli_real_escape_string($koneksi, $nama_klien);
-            $j = mysqli_real_escape_string($koneksi, $jenis_kasus);
-            $d = mysqli_real_escape_string($koneksi, $deskripsi);
-            $t = mysqli_real_escape_string($koneksi, $tanggal_masuk);
-            $s = mysqli_real_escape_string($koneksi, $status);
+        $k = mysqli_real_escape_string($koneksi, $nama_klien);
+        $n = mysqli_real_escape_string($koneksi, $nomor_kasus);
+        $t = mysqli_real_escape_string($koneksi, $tanggal_masuk);
+        $s = mysqli_real_escape_string($koneksi, $status);
+        $d = mysqli_real_escape_string($koneksi, $deskripsi);
 
-            $query = "INSERT INTO kasus (nomor_kasus, nama_klien, jenis_kasus, deskripsi, tanggal_masuk, status, pengacara_id)
-                      VALUES ('$n','$k','$j','$d','$t','$s', $user_id)";
-            if (mysqli_query($koneksi, $query)) {
-                header("Location: dashboard.php?pesan=tambah_sukses");
-                exit();
-            } else {
-                $error = "Gagal menyimpan: " . mysqli_error($koneksi);
-            }
+        $query = "UPDATE kasus SET
+            nama_klien    = '$k',
+            nomor_kasus   = '$n',
+            tanggal_masuk = '$t',
+            status        = '$s',
+            deskripsi     = '$d'
+            WHERE id = $id AND pengacara_id = $user_id";
+
+        if (mysqli_query($koneksi, $query)) {
+            header("Location: dashboard.php?pesan=edit_sukses");
+            exit();
+        } else {
+            $error = "Gagal menyimpan: " . mysqli_error($koneksi);
         }
     }
+    // Reload kasus jika ada error, gunakan POST values
+    $kasus['nama_klien']    = $nama_klien;
+    $kasus['nomor_kasus']   = $nomor_kasus;
+    $kasus['tanggal_masuk'] = $tanggal_masuk;
+    $kasus['status']        = $status;
+    $kasus['deskripsi']     = $deskripsi;
 }
 ?>
 <!DOCTYPE html>
@@ -47,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tambah Kasus — LexCorp Law Firm</title>
+    <title>Edit Kasus — LexCorp Law Firm</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
     <style>
@@ -122,6 +140,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin: 0 0 2px;
         }
         .form-card-header p { color: #888; font-size: 0.82rem; font-style: italic; margin: 0; }
+        .case-id-pill {
+            display: inline-block;
+            background: rgba(201,162,39,0.15);
+            color: #c9a227;
+            border: 1px solid #c9a227;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            padding: 2px 10px;
+            margin-top: 8px;
+            font-family: monospace;
+        }
         .form-card-body { padding: 28px 32px; }
         .form-label {
             font-size: 0.8rem;
@@ -145,11 +174,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             box-shadow: 0 0 0 3px rgba(201,162,39,0.15);
             background: #fff;
         }
-        .form-control::placeholder { color: #bbb; }
+        .form-control[readonly] {
+            background: #f0ece2;
+            color: #888;
+            cursor: not-allowed;
+        }
         textarea.form-control { resize: vertical; min-height: 110px; }
         .btn-submit {
-            background: #c9a227;
-            color: #13111a;
+            background: #1a4a8b;
+            color: #fff;
             font-family: 'Playfair Display', serif;
             font-size: 0.92rem;
             font-weight: 700;
@@ -159,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transition: background 0.2s;
             letter-spacing: 0.5px;
         }
-        .btn-submit:hover { background: #a8871e; }
+        .btn-submit:hover { background: #0f3160; }
         .btn-back {
             background: transparent;
             color: #666;
@@ -172,10 +205,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transition: all 0.2s;
         }
         .btn-back:hover { border-color: #999; color: #333; }
-        .form-divider {
-            border: none;
-            border-top: 1px solid #ede8de;
-            margin: 20px 0;
+        .form-divider { border: none; border-top: 1px solid #ede8de; margin: 20px 0; }
+        .info-readonly {
+            font-size: 0.78rem;
+            color: #aaa;
+            font-style: italic;
+            margin-top: 4px;
         }
     </style>
 </head>
@@ -189,30 +224,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="main-content">
     <div class="form-card">
         <div class="form-card-header">
-            <h3>📋 Input Data Kasus</h3>
-            <p>Silakan isi formulir berikut untuk mendaftarkan kasus baru.</p>
+            <h3>✏️ Edit Data Kasus</h3>
+            <p>Perbarui informasi kasus yang telah terdaftar.</p>
+            <span class="case-id-pill"><?= htmlspecialchars($kasus['nomor_kasus']) ?></span>
         </div>
         <div class="form-card-body">
 
             <?php if ($error): ?>
                 <div class="alert alert-danger py-2 px-3 mb-3" style="font-size:0.85rem; border-left:4px solid #8b1a1a; border-radius:2px;">
-                    ❌ <?= $error ?>
+                    ❌ <?= htmlspecialchars($error) ?>
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="tambah_kasus.php">
+            <form method="POST" action="edit_kasus.php?id=<?= $id ?>">
 
-                <div class="row g-3">
+                <div class="row g-3 mb-3">
                     <div class="col-md-6">
                         <label class="form-label">Nomor Kasus <span class="req">*</span></label>
                         <input type="text" name="nomor_kasus" class="form-control"
-                               placeholder="cth: KS-2025-006"
-                               value="<?= htmlspecialchars($_POST['nomor_kasus'] ?? '') ?>">
+                               value="<?= htmlspecialchars($kasus['nomor_kasus']) ?>">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Tanggal Masuk <span class="req">*</span></label>
                         <input type="date" name="tanggal_masuk" class="form-control"
-                               value="<?= htmlspecialchars($_POST['tanggal_masuk'] ?? date('Y-m-d')) ?>">
+                               value="<?= htmlspecialchars($kasus['tanggal_masuk']) ?>">
                     </div>
                 </div>
 
@@ -221,38 +256,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="mb-3">
                     <label class="form-label">Nama Klien <span class="req">*</span></label>
                     <input type="text" name="nama_klien" class="form-control"
-                           placeholder="Nama lengkap klien / perusahaan"
-                           value="<?= htmlspecialchars($_POST['nama_klien'] ?? '') ?>">
+                           value="<?= htmlspecialchars($kasus['nama_klien']) ?>">
                 </div>
 
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
-                        <label class="form-label">Jenis Kasus <span class="req">*</span></label>
-                        <select name="jenis_kasus" class="form-select">
-                            <option value="">— Pilih Jenis —</option>
-                            <?php foreach (['Perdata','Pidana','Ketenagakerjaan','Bisnis','Keluarga'] as $j): ?>
-                                <option value="<?= $j ?>" <?= (($_POST['jenis_kasus'] ?? '') === $j) ? 'selected' : '' ?>><?= $j ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                        <label class="form-label">Jenis Kasus</label>
+                        <input type="text" class="form-control" readonly
+                               value="<?= htmlspecialchars($kasus['jenis_kasus']) ?>">
+                        <p class="info-readonly">Jenis kasus tidak dapat diubah setelah disimpan.</p>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Status Kasus <span class="req">*</span></label>
                         <select name="status" class="form-select">
                             <?php foreach (['Aktif','Selesai','Ditangguhkan'] as $s): ?>
-                                <option value="<?= $s ?>" <?= (($_POST['status'] ?? 'Aktif') === $s) ? 'selected' : '' ?>><?= $s ?></option>
+                                <option value="<?= $s ?>" <?= ($kasus['status'] === $s) ? 'selected' : '' ?>><?= $s ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                 </div>
 
                 <div class="mb-4">
-                    <label class="form-label">Deskripsi Kasus <span class="req">*</span></label>
-                    <textarea name="deskripsi" class="form-control"
-                              placeholder="Uraikan kasus secara singkat dan jelas..."><?= htmlspecialchars($_POST['deskripsi'] ?? '') ?></textarea>
+                    <label class="form-label">Deskripsi Kasus</label>
+                    <textarea name="deskripsi" class="form-control"><?= htmlspecialchars($kasus['deskripsi']) ?></textarea>
                 </div>
 
                 <div class="d-flex gap-2">
-                    <button type="submit" class="btn-submit">💾 Simpan Kasus</button>
+                    <button type="submit" class="btn-submit">💾 Simpan Perubahan</button>
                     <a href="dashboard.php" class="btn-back">Batal</a>
                 </div>
 
