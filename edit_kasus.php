@@ -3,8 +3,10 @@
 require_once 'includes/cek_session.php';
 require_once 'includes/koneksi.php';
 
-$user_id = $_SESSION['user_id'];
-$error   = "";
+$user_id      = $_SESSION['user_id'];
+$nama_lengkap = $_SESSION['nama_lengkap'];
+$nama_safe    = mysqli_real_escape_string($koneksi, $nama_lengkap);
+$error        = "";
 
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) {
@@ -12,8 +14,8 @@ if (!$id) {
     exit();
 }
 
-// Ambil data kasus
-$result = mysqli_query($koneksi, "SELECT * FROM kasus WHERE id = $id AND pengacara_id = $user_id LIMIT 1");
+// Ambil data kasus — pastikan milik pengacara yg login
+$result = mysqli_query($koneksi, "SELECT * FROM kasus WHERE id = $id AND pengacara = '$nama_safe' LIMIT 1");
 if (mysqli_num_rows($result) === 0) {
     header("Location: dashboard.php");
     exit();
@@ -43,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             tanggal_masuk = '$t',
             status        = '$s',
             deskripsi     = '$d'
-            WHERE id = $id AND pengacara_id = $user_id";
+            WHERE id = $id AND pengacara = '$nama_safe'";
 
         if (mysqli_query($koneksi, $query)) {
             header("Location: dashboard.php?pesan=edit_sukses");
